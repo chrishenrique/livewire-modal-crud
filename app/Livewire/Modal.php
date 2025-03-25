@@ -19,15 +19,15 @@ https://github.com/scchethu/Bootstap-4-livewire-modal
 
 class Modal extends Component
 {
-    public ?string $activeComponent;
+    // public ?string $activeComponent;
 
-    public array $components = [];
+    // public array $components = [];
     public $component = null;
 
     public function resetState(): void
     {
-        $this->components = [];
-        $this->activeComponent = null;
+        // $this->components = [];
+        // $this->activeComponent = null;
     }
 
     public function openModal($component, $arguments = [], $modalAttributes = []): void
@@ -57,14 +57,12 @@ class Modal extends Component
                 'closeOnEscapeIsForceful' => $componentClass::closeModalOnEscapeIsForceful(),
                 'dispatchCloseEvent' => $componentClass::dispatchCloseEvent(),
                 'destroyOnClose' => $componentClass::destroyOnClose(),
-                'maxWidth' => $componentClass::modalMaxWidth(),
-                'maxWidthClass' => $componentClass::modalMaxWidthClass(),
             ], $modalAttributes),
         ];
 
-        $this->components[$id] = $this->component;
+        // $this->components[$id] = $this->component;
 
-        $this->activeComponent = $id;
+        // $this->activeComponent = $id;
 
         $this->dispatch('openModalInBrowser');
         // $this->dispatch('activeModalComponentChanged', id: $id);
@@ -115,9 +113,10 @@ class Modal extends Component
             ->filter();
     }
 
-    public function destroyComponent($id): void
+    public function destroyComponent(): void
     {
-        unset($this->components[$id]);
+        // unset($this->components[$id]);
+        $this->component = null;
     }
 
     public function getListeners(): array
@@ -128,9 +127,9 @@ class Modal extends Component
         ];
     }
 
-    public function render()
+    public function dehydrate()
     {
-        return view('livewire.modal');
+        $this->component = null;
     }
 
 }

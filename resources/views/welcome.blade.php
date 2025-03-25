@@ -9,20 +9,27 @@
                             component: 'modals.users-form',
                             arguments: {
                                 mode:'create',
+                                model: '\\App\\Models\\User',
                             }
                         })"
                     >Novo</button>
             </div>
-
-            <hr class="col-3 col-md-2 mb-5">
-
             <div class="row g-5">
                 <div class="col-12">
                     <ul class="h3">
                         @forelse (User::all() as $user)
-                            <li class="d-flex">
-                                {{ $user->name }} 
-                                <button class="btn btn-primary"
+                            <li class="d-flex mb-1">
+                                <button class="btn btn-info mx-1"
+                                    onclick="Livewire.dispatch('openModal', {
+                                        component: 'modals.users-form',
+                                        arguments: {
+                                            mode:'show',
+                                            id: {{ $user->id }},
+                                            model: '\\App\\Models\\User',
+                                        }
+                                    })"
+                                >Ver</button>
+                                <button class="btn btn-primary mx-1"
                                     onclick="Livewire.dispatch('openModal', {
                                         component: 'modals.users-form',
                                         arguments: {
@@ -32,7 +39,7 @@
                                         }
                                     })"
                                 >Editar</button>
-                                <button class="btn btn-danger"
+                                <button class="btn btn-danger mx-1"
                                     onclick="Livewire.dispatch('openModal', {
                                         component: 'modals.users-form',
                                         arguments: {
@@ -42,6 +49,7 @@
                                         }
                                     })"
                                 >Apagar</button>
+                                {{ $user->name }} 
                             </li>
                         @empty
                         <li>Empty user</li>

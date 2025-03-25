@@ -2,12 +2,11 @@
     <div 
         id="modal-component"
         class="modal fade show"
-        data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true"
         >
-        @if(isset($component))
-        <div class="modal-dialog modal-dialog-centered {{ Arr::get($component, 'attributes.modal_size') }}" role="document">
+        <div class="modal-dialog modal-dialog-centered {{ Arr::get($component ?? [], 'modalAttributes.size') }}" role="document">
+            @isset($component)
             @livewire($component['name'], $component['arguments'], key($component['id']))
+            @endisset
         </div>
-        @endif
     </div>
 </div>

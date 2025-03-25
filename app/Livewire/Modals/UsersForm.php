@@ -4,105 +4,63 @@ namespace App\Livewire\Modals;
 
 use App\Models\User;
 use App\Livewire\ModalComponent;
-use Illuminate\Auth\GenericUser;
 use Livewire\Attributes\{Computed,Validate};
 use Livewire\Attributes\On;
 use Livewire\Attributes\Layout;
 
 class UsersForm extends ModalComponent
 {
-    public string $modalTitle = '';
+    public string $showTitle = 'Visualizar usuario';
     public string $createTitle = 'Novo usuario';
     public string $editTitle = 'Editar usuario';
     public string $deleteTitle = 'Apagar usuario';
-    public $mode;
-    public $id;
-    public $model;
+    public string $modalClose = 'Cancelar';
+    public string $modalBtn = 'Enviar';
+
+    protected string $view = 'livewire.modals.users-form';
+    protected array $fillable = [
+        'name',
+        'email',
+        'password'
+    ];
 
     #[Validate('required|min:3')] 
     public $name;
     #[Validate('required|min:3')] 
     public $email;
-    #[Validate('required|min:3')] 
     public $password;
 
     public function mount()
     {
-        $this->modalTitle = match ($this->mode) {
+        $this->modalTitle = match ($this->getMode()) {
+            'show' => $this->showTitle,
             'create' => $this->createTitle,
             'edit' => $this->editTitle,
-            'delete' => $this->createTitle,
+            'delete' => $this->deleteTitle,
+            default => $this->modalTitle,
         };
 
-        $this->model && $this->fill((new $this->model)->findOrFail($this->id));
+        $this->modalBtn = match ($this->getMode()) {
+            'delete' => 'Apagar',
+            default => $this->modalBtn,
+        };
+
+        $this->modalClose = match ($this->getMode()) {
+            'show' => 'Voltar',
+            default => $this->modalClose,
+        };
+
+        $this->id && $this->fill(
+            $this->user()
+        );
+
+        $this->showSubmit = ($this->getMode() != 'show');
     }
 
-    #[On('user-saved')] 
+    // #[On('user-saved')] 
     #[Computed()]
     public function user(): User
     {
-        return match ($this->mode) {
-            'create' => new $this->model,
-            default => (new $this->model)->findOrFail($this->id),
-        };
-    }
-
-    public function render()
-    {
-        if($this->mode === 'delete')
-        {
-            return <<<'HTML'
-            <div>
-                {{-- Deseja realmente apagar? --}}
-            </div>
-            HTML;
-        }
-
-        return view('livewire.modals.users-form');
-    }
-
-    public function submit(): void
-    {
-        switch ($this->mode) {
-            case 'create':
-                $this->store();
-                break;
-            case 'edit':
-                $this->update();
-                break;
-            case 'delete':
-                $this->destroy();
-                break;
-        }
-    }
-
-    protected function store()
-    {
-        $validateds = $this->validate(); 
-        $input = $this->all();
-        $this->user->create($input);
-
-        $this->dispatch('user-saved');
-        $this->dispatch('user-created');
-        $this->closeModal();
-    }
-
-    protected function update()
-    {
-        $validateds = $this->validate(); 
-        $input = $this->all();
-        $this->user->update($input);
-
-        $this->dispatch('user-saved');
-        $this->dispatch('user-updated');
-        $this->closeModal();
-    }
-
-    public function destroy()
-    {
-        $this->user->delete();
-        $this->dispatch('user-saved');
-        $this->dispatch('user-deleted');
-        $this->closeModal();
+        return $this->model;
     }
 }
