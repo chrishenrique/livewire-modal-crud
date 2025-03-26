@@ -2,26 +2,21 @@ import './bootstrap';
 
 document.addEventListener('livewire:initialized', () => {
     Livewire.hook('component.init', ({ component, cleanup }) => {
-        switch (component.name) {
-            case "modal-component":
-                setupModals();
-                break;
-
-            default:
-                break;
+        if (component.name == "modal-component") {
+            setupModalComponent();
         }
     });
 });
 
 document.addEventListener('livewire:navigated', () => {
-    setupModals();
+    setupModalComponent();
 });
 
 // Modal Component
 const modalComponent = new bootstrap.Modal(document.getElementById('modal-component'), {
 
 });
-function setupModals(){
+function setupModalComponent(){
     modalComponent.handleUpdate();
     window.addEventListener('openModalInBrowser', event => {
         modalComponent.show();
@@ -35,5 +30,5 @@ function setupModals(){
 }
 
 window.addEventListener('load', event => {
-    setupModals();
+    setupModalComponent();
 })

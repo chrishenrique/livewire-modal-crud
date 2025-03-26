@@ -15,9 +15,10 @@ abstract class ModalComponent extends Component implements Contract
     public $mode = null;
     public $id = null;
     public $model = null;
+    protected $modelClass = null;
     public $showSubmit = true;
 
-    protected string $view = '';
+    public string $viewForm = '';
     public string $modalTitle = '';
     public string $showTitle = 'Visualizar';
     public string $createTitle = 'Novo';
@@ -33,23 +34,44 @@ abstract class ModalComponent extends Component implements Contract
 
     public function boot()
     {
-        $this->model = new $this->model;
+        $this->model = new $this->modelClass;
 
         if($this->id)
         {
             $this->model = $this->model->findOrFail($this->id);
+            $this->fill($this->model);
         }
+
+        $this->showSubmit = ($this->getMode() != 'show');
+
+        $this->modalTitle = match ($this->getMode()) {
+            'show' => $this->showTitle,
+            'create' => $this->createTitle,
+            'edit' => $this->editTitle,
+            'delete' => $this->deleteTitle,
+            default => $this->modalTitle,
+        };
+
+        $this->modalBtn = match ($this->getMode()) {
+            'delete' => 'Apagar',
+            default => $this->modalBtn,
+        };
+
+        $this->modalClose = match ($this->getMode()) {
+            'show' => 'Voltar',
+            default => $this->modalClose,
+        };
     }
 
     public function render()
     {
-        if($this->getMode() === 'delete')
-        {
-            return view('livewire.modals.delete')
-                    ->with('message', 'Deseja realmente apagar?');
-        }
-
-        return view($this->view);
+        return match ($this->getMode()) {
+            'create' => $this->viewCreate(),
+            'edit' => $this->viewEdit(),
+            'delete' => $this->viewDelete(),
+            'show' => $this->viewShow(),
+            default => view($this->viewForm ?? 'components.layouts.modal'),
+        };
     }
 
     public function submit(): void
@@ -64,32 +86,50 @@ abstract class ModalComponent extends Component implements Contract
             case 'delete':
                 $this->destroy();
                 break;
-            case 'show':
+            default:
+                $this->closeModal();
                 break;
         }
     }
 
-    protected function store()
+    protected function store(): void
     {
         $validateds = $this->validate(); 
-        $this->model->create($this->only($this->fillable ?? $validateds));
-        $this->reset(); 
+        $this->model = $this->model->create($this->only($this->fillable ?? $validateds));
         $this->closeModal();
+        $this->emitEvent();
     }
 
-    protected function update()
+    protected function update(): void
     {
         $validateds = $this->validate(); 
         $this->model->update($this->only($this->fillable ?? $validateds));
-        $this->reset(); 
         $this->closeModal();
+        $this->emitEvent();
     }
 
-    protected function destroy()
+    protected function destroy(): void
     {
         $this->model->delete();
-        $this->reset(); 
         $this->closeModal();
+        $this->emitEvent();
+    }
+
+    public static function modalSize(): string
+    {
+        /*
+            modal-sm
+            modal-md
+            modal-lg
+            modal-xl
+            modal-fullscreen
+            modal-fullscreen-sm-down	Below 576px
+            modal-fullscreen-md-down	Below 768px
+            modal-fullscreen-lg-down	Below 992px
+            modal-fullscreen-xl-down	Below 1200px
+            modal-fullscreen-xxl-down   Below 1400px
+         */
+        return '';
     }
 
     public function destroySkippedModals(): self
@@ -132,6 +172,16 @@ abstract class ModalComponent extends Component implements Contract
         $this->closeModal();
     }
 
+    public static function modalCentered(): bool
+    {
+        return true;
+    }
+
+    public static function modalScrollable(): bool
+    {
+        return true;
+    }
+
     public static function closeModalOnClickAway(): bool
     {
         return true;
@@ -170,6 +220,39 @@ abstract class ModalComponent extends Component implements Contract
                 $this->dispatch($event, ...$params ?? [])->to($component);
             }
         }
+    }
+
+    public function viewShow()
+    {
+        return view('livewire.modals.show');
+    }
+
+    public function viewCreate()
+    {
+        return view($this->viewForm ?? 'components.layouts.modal');
+    }
+
+    public function viewEdit()
+    {
+        return view($this->viewForm ?? 'components.layouts.modal');
+    }
+
+    public function viewDelete()
+    {
+        return view('livewire.modals.delete')
+                    ->with('message', 'Deseja realmente apagar?');
+    }
+
+    public function emitEvent(): void
+    {
+        $method = match ($this->getMode()) {
+            'create' => 'stored',
+            'edit' => 'updated',
+            'delete' => 'destroyed',
+            default => null,
+        };
+
+        $method && method_exists($this, $method) && $this->$method();
     }
 
 }

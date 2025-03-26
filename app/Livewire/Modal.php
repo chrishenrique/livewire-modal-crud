@@ -57,13 +57,15 @@ class Modal extends Component
                 'closeOnEscapeIsForceful' => $componentClass::closeModalOnEscapeIsForceful(),
                 'dispatchCloseEvent' => $componentClass::dispatchCloseEvent(),
                 'destroyOnClose' => $componentClass::destroyOnClose(),
+                'size' => $componentClass::modalSize(),
+                'scrollable' => $componentClass::modalScrollable(),
+                'centered' => $componentClass::modalCentered(),
             ], $modalAttributes),
         ];
 
         // $this->components[$id] = $this->component;
 
         // $this->activeComponent = $id;
-
         $this->dispatch('openModalInBrowser');
         // $this->dispatch('activeModalComponentChanged', id: $id);
     }
