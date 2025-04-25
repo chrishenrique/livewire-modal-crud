@@ -1,0 +1,38 @@
+{
+    "name": "chrishenrique/livewire-modal-crud",
+    "description": "Livewire Modals Crud easy",
+    "keywords": ["laravel", "livewire", "modal", "crud", "laravel-package", "php"],
+     "homepage": "https://github.com/chrishenrique16/livewire-modal-crud",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "ChrisHenrique\\ModalCrud\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Christiano Costa",
+            "email": "chrishenrique16@hotmail.com",
+            "homepage": "https://christianocosta.com.br",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8",
+        "laravel/framework": "^7.0 | ^8.0 | ^9.0 | ^10.0 | ^11.0 | ^12.0",
+        "livewire/livewire": "^3.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ChrisHenrique\\ModalCrud\\ModalCrudServiceProvider"
+            ],
+            "aliases": {
+                "Modal": "ChrisHenrique\\ModalCrud\\Modal"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
