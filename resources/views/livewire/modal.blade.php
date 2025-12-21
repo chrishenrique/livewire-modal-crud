@@ -3,7 +3,7 @@
 @endassets
 
 <div>
-    <div id="modal-crud-base" class="modal fade show">
+    <div id="modal-crud-base" class="modal fade" tabindex="-1">
         <div 
             @class([
                 'modal-dialog',

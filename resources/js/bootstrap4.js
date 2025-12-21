@@ -1,19 +1,29 @@
 // Bootstrap 4
-const $modalComponent = $('#modal-crud-base');
-function setupmodal() {
-    $modalComponent.modal('handleUpdate');
-    window.addEventListener('openModalInBrowser', event => {
-        $modalComponent.modal('show');
+document.addEventListener("DOMContentLoaded", setupModal);
+document.addEventListener("livewire:navigated", setupModal);
+document.addEventListener('livewire:navigated', () => {
+    const modals = document.querySelectorAll('#modal-crud-base');
+    modals.forEach((modal, i) => {
+        if (i > 0) modal.remove();
     });
-    window.addEventListener('closeModalInBrowser', event => {
-        $modalComponent.modal('hide');
+})
+
+function setupModal() {
+    const $modal = $('#modal-crud-base');
+
+    if ($modal.data("initialized")) return;
+    $modal.data("initialized", true);
+
+    window.addEventListener('openModalInBrowser', () => {
+        $modal.modal('show');
     });
-    $modalComponent.on('hidden.bs.modal', function (event) {
+
+    window.addEventListener('closeModalInBrowser', () => {
+        $modal.modal('hide');
+    });
+
+    $modal.on('hidden.bs.modal', function () {
         Livewire.dispatch('destroyComponent');
         Livewire.dispatch('closeModal');
     });
 }
-
-window.addEventListener('load', event => {
-    setupmodal();
-})
