@@ -258,7 +258,7 @@ abstract class ModalCrud extends Component implements ModalContract
     {
         $method = match ($this->getMode()) {
             'create' => 'stored',
-            'edit' => 'updated',
+            'edit' => 'changed',
             'delete' => 'destroyed',
             default => null,
         };
