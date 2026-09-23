@@ -1,29 +1,42 @@
-// Bootstrap 4
-document.addEventListener("DOMContentLoaded", setupModal);
-document.addEventListener("livewire:navigated", setupModal);
-document.addEventListener('livewire:navigated', () => {
-    const modals = document.querySelectorAll('#modal-crud-base');
-    modals.forEach((modal, i) => {
-        if (i > 0) modal.remove();
+/**
+ * modal-crud adapter for Bootstrap 4. Requires core.js, jQuery and Bootstrap's JS.
+ */
+(function () {
+    'use strict';
+
+    if (!window.ModalCrud) {
+        console.error('[modal-crud] core.js must be loaded before bootstrap4.js.');
+        return;
+    }
+
+    if (typeof window.jQuery === 'undefined') {
+        window.ModalCrud.warn('Bootstrap 4 requires jQuery, which was not found on the page.');
+        return;
+    }
+
+    var $ = window.jQuery;
+
+    if (typeof $.fn.modal === 'undefined') {
+        window.ModalCrud.warn("Bootstrap 4's JavaScript was not found on the page; modals will not open.");
+        return;
+    }
+
+    window.ModalCrud.register({
+        show: function (el, options) {
+            $(el).modal({
+                backdrop: options.closeOnClickAway ? true : 'static',
+                keyboard: options.closeOnEscape,
+                show: true,
+            });
+        },
+        hide: function (el) {
+            $(el).modal('hide');
+        },
+        dispose: function (el) {
+            $(el).modal('dispose');
+        },
+        onHidden: function (el, callback) {
+            $(el).on('hidden.bs.modal', callback);
+        },
     });
-})
-
-function setupModal() {
-    const $modal = $('#modal-crud-base');
-
-    if ($modal.data("initialized")) return;
-    $modal.data("initialized", true);
-
-    window.addEventListener('openModalInBrowser', () => {
-        $modal.modal('show');
-    });
-
-    window.addEventListener('closeModalInBrowser', () => {
-        $modal.modal('hide');
-    });
-
-    $modal.on('hidden.bs.modal', function () {
-        Livewire.dispatch('destroyComponent');
-        Livewire.dispatch('closeModal');
-    });
-}
+})();

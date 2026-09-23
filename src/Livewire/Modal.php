@@ -2,16 +2,20 @@
 
 namespace ChrisHenrique\ModalCrud\Livewire;
 
-use Exception;
-use ReflectionClass;
-use Livewire\Component;
-use Illuminate\View\View;
-use Illuminate\Support\Reflector;
-use Illuminate\Support\Collection;
-use Livewire\Mechanisms\ComponentRegistry;
-use Illuminate\Contracts\Routing\UrlRoutable;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use BackedEnum;
 use ChrisHenrique\ModalCrud\Livewire\Contracts\ModalContract;
+use ChrisHenrique\ModalCrud\ModalAssets;
+use Illuminate\Contracts\Routing\UrlRoutable;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
+use InvalidArgumentException;
+use Livewire\Component;
+use ReflectionClass;
+use ReflectionNamedType;
+use ReflectionProperty;
 
 /* Libs Based
 https://github.com/wire-elements/modal
@@ -20,75 +24,95 @@ https://github.com/scchethu/Bootstap-4-livewire-modal
 
 class Modal extends Component
 {
-    // public ?string $activeComponent;
+    /**
+     * The modal currently mounted, or null when nothing is open.
+     *
+     * @var array{id: string, name: string, arguments: array<string, mixed>, modalAttributes: array<string, mixed>}|null
+     */
+    public ?array $component = null;
 
-    // public array $components = [];
-    public $component = null;
-    public string $libPath = '';
-
-    public function __construct()
+    /**
+     * Mount a Livewire component inside the modal shell.
+     *
+     * SECURITY: this listener is reachable from the browser, so `$component`,
+     * `$arguments` and `$modalAttributes` are all untrusted input. The
+     * ModalContract check below is a routing guard, not an authorization one —
+     * each modal is responsible for its own access control (see
+     * ModalCrud::authorizeModal()).
+     *
+     * @param  array<string, mixed>  $arguments
+     * @param  array<string, mixed>  $modalAttributes
+     */
+    public function openModal(string $component, array $arguments = [], array $modalAttributes = []): void
     {
-        $this->libPath = (new \ChrisHenrique\ModalCrud\Modal)->getJsPath();
-    }
+        $componentClass = app('livewire.finder')->resolveClassComponentClassName($component);
 
-    public function resetState(): void
-    {
-        // $this->components = [];
-        // $this->activeComponent = null;
-    }
-
-    public function openModal($component, $arguments = [], $modalAttributes = []): void
-    {
-        $requiredInterface = ModalContract::class;
-        $componentClass = app(ComponentRegistry::class)->getClass($component);
-        $reflect = new ReflectionClass($componentClass);
-
-        if ($reflect->implementsInterface($requiredInterface) === false) {
-            throw new Exception("[{$componentClass}] does not implement [{$requiredInterface}] interface.");
+        if ($componentClass === null) {
+            throw new InvalidArgumentException("Unable to resolve a class-based Livewire component for [{$component}].");
         }
 
-        $id = md5($component.serialize($arguments));
+        $reflect = new ReflectionClass($componentClass);
+
+        if ($reflect->implementsInterface(ModalContract::class) === false) {
+            throw new InvalidArgumentException(
+                "[{$componentClass}] does not implement [".ModalContract::class.'] interface.'
+            );
+        }
 
         $arguments = collect($arguments)
-            ->merge($this->resolveComponentProps($arguments, new $componentClass()))
+            ->merge($this->resolveComponentProps($arguments, new $componentClass))
             ->all();
 
         $this->component = [
-            'id' => $id,
+            'id' => $this->componentKey($component, $arguments),
             'name' => $component,
-            'attributes' => $arguments, // Deprecated
             'arguments' => $arguments,
             'modalAttributes' => array_merge([
                 'closeOnClickAway' => $componentClass::closeModalOnClickAway(),
                 'closeOnEscape' => $componentClass::closeModalOnEscape(),
-                'closeOnEscapeIsForceful' => $componentClass::closeModalOnEscapeIsForceful(),
-                'dispatchCloseEvent' => $componentClass::dispatchCloseEvent(),
                 'destroyOnClose' => $componentClass::destroyOnClose(),
+                'dispatchCloseEvent' => $componentClass::dispatchCloseEvent(),
                 'size' => $componentClass::modalSize(),
                 'scrollable' => $componentClass::modalScrollable(),
                 'centered' => $componentClass::modalCentered(),
             ], $modalAttributes),
         ];
 
-        // $this->components[$id] = $this->component;
-
-        // $this->activeComponent = $id;
         $this->dispatch('openModalInBrowser');
-        // $this->dispatch('activeModalComponentChanged', id: $id);
     }
 
+    /**
+     * Stable key for the nested component.
+     *
+     * json_encode is used instead of serialize() so that non-serializable
+     * arguments (closures, resources) cannot blow up modal opening; anything
+     * json_encode cannot express falls back to a random key, which only costs
+     * a re-mount.
+     *
+     * @param  array<string, mixed>  $arguments
+     */
+    protected function componentKey(string $component, array $arguments): string
+    {
+        $signature = json_encode($arguments, JSON_PARTIAL_OUTPUT_ON_ERROR);
+
+        return md5($component.($signature === false ? uniqid('', true) : $signature));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return Collection<string, mixed>
+     */
     public function resolveComponentProps(array $attributes, Component $component): Collection
     {
         return $this->getPublicPropertyTypes($component)
             ->intersectByKeys($attributes)
-            ->map(function ($className, $propName) use ($attributes) {
-                $resolved = $this->resolveParameter($attributes, $propName, $className);
-
-                return $resolved;
-            });
+            ->map(fn ($className, $propName) => $this->resolveParameter($attributes, $propName, $className));
     }
 
-    protected function resolveParameter($attributes, $parameterName, $parameterClassName)
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function resolveParameter(array $attributes, string $parameterName, string $parameterClassName): mixed
     {
         $parameterValue = $attributes[$parameterName];
 
@@ -96,38 +120,74 @@ class Modal extends Component
             return $parameterValue;
         }
 
-        if(enum_exists($parameterClassName)){
-            $enum = $parameterClassName::tryFrom($parameterValue);
-        
-            if($enum !== null){
-                return $enum;
-            }
+        // Only backed enums expose tryFrom(); a pure enum would fatal here.
+        if (is_subclass_of($parameterClassName, BackedEnum::class)) {
+            return is_int($parameterValue) || is_string($parameterValue)
+                ? $parameterClassName::tryFrom($parameterValue) ?? $parameterValue
+                : $parameterValue;
+        }
+
+        // Only Eloquent models take part in route-model binding. Without this
+        // guard any typed public property (Carbon, a DTO, a value object) would
+        // reach resolveRouteBinding() and fail with an unrelated error.
+        if (! is_subclass_of($parameterClassName, Model::class)) {
+            return $parameterValue;
         }
 
         $instance = app()->make($parameterClassName);
 
         if (! $model = $instance->resolveRouteBinding($parameterValue)) {
-            throw (new ModelNotFoundException())->setModel(get_class($instance), [$parameterValue]);
+            throw (new ModelNotFoundException)->setModel($parameterClassName, [$parameterValue]);
         }
 
         return $model;
     }
 
-    public function getPublicPropertyTypes($component): Collection
+    /**
+     * Class names of the component's typed public properties, keyed by name.
+     *
+     * @return Collection<string, class-string>
+     */
+    public function getPublicPropertyTypes(Component $component): Collection
     {
-        return collect($component->all())
-            ->map(function ($value, $name) use ($component) {
-                return Reflector::getParameterClassName(new \ReflectionProperty($component, $name));
-            })
-            ->filter();
+        $types = [];
+
+        foreach (array_keys($component->all()) as $name) {
+            $className = $this->propertyClassName(new ReflectionProperty($component, (string) $name));
+
+            if ($className !== null) {
+                $types[(string) $name] = $className;
+            }
+        }
+
+        return collect($types);
+    }
+
+    /**
+     * The declared class of a typed property, or null for builtin/untyped ones.
+     */
+    /**
+     * @return class-string|null
+     */
+    protected function propertyClassName(ReflectionProperty $property): ?string
+    {
+        $type = $property->getType();
+
+        if (! $type instanceof ReflectionNamedType || $type->isBuiltin()) {
+            return null;
+        }
+
+        return $type->getName();
     }
 
     public function destroyComponent(): void
     {
-        // unset($this->components[$id]);
         $this->component = null;
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function getListeners(): array
     {
         return [
@@ -136,14 +196,37 @@ class Modal extends Component
         ];
     }
 
-    public function dehydrate()
+    /**
+     * The mounted component is intentionally dropped on every dehydration.
+     *
+     * The nested Livewire component takes over its own lifecycle once mounted,
+     * so keeping the descriptor in this component's payload would only make it
+     * re-mount (and reset) on every parent round-trip. Removing this line
+     * breaks the modal — see ModalTest::test_open_modal_clears_descriptor_on_dehydrate.
+     */
+    public function dehydrate(): void
     {
         $this->component = null;
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('modalcrud::livewire.modal');
+        return $this->viewFrom('modal-crud::livewire.modal', [
+            'assets' => app(ModalAssets::class),
+        ]);
     }
 
+    /**
+     * Render a view by name.
+     *
+     * The view factory is used instead of the `view()` helper because these
+     * names are runtime values (a package namespace, or a user-supplied
+     * `$viewForm`) and can never satisfy a statically verified view-string.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function viewFrom(string $name, array $data = []): View
+    {
+        return app(ViewFactory::class)->make($name, $data);
+    }
 }

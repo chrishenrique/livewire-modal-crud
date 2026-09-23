@@ -1,8 +1,15 @@
 {
     "name": "chrishenrique/livewire-modal-crud",
     "description": "Livewire Modals Crud easy",
-    "keywords": ["laravel", "livewire", "modal", "crud", "laravel-package", "php"],
-     "homepage": "https://github.com/chrishenrique16/livewire-modal-crud",
+    "keywords": [
+        "laravel",
+        "livewire",
+        "modal",
+        "crud",
+        "laravel-package",
+        "php"
+    ],
+    "homepage": "https://github.com/chrishenrique16/livewire-modal-crud",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -19,8 +26,14 @@
         }
     ],
     "require": {
-        "php": "^8",
-        "laravel/framework": "^7.0 | ^8.0 | ^9.0 | ^10.0 | ^11.0 | ^12.0",
+        "php": "^8.2",
+        "illuminate/config": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/database": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/http": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/routing": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/view": "^11.0 || ^12.0 || ^13.0",
         "livewire/livewire": "^4.0"
     },
     "extra": {
@@ -29,10 +42,33 @@
                 "ChrisHenrique\\ModalCrud\\ModalCrudServiceProvider"
             ],
             "aliases": {
-                "Modal": "ChrisHenrique\\ModalCrud\\Modal"
+                "Modal": "ChrisHenrique\\ModalCrud\\Facades\\Modal"
             }
         }
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+        "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ChrisHenrique\\ModalCrud\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test:coverage": "vendor/bin/phpunit --coverage-text",
+        "analyse": "vendor/bin/phpstan analyse",
+        "format": "vendor/bin/pint",
+        "format:test": "vendor/bin/pint --test"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": false
+        }
+    }
 }
